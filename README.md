@@ -1,6 +1,5 @@
-# retail-sales-data-warehouse-iics
-End-to-End Retail Sales Data Warehouse using IICS
-# Retail Sales Data Warehouse Project (IICS)
+# Retail Sales Analytics Platform
+(SQL Server + IICS + Power BI)
 
 ## 📌 Project Overview
 This project demonstrates an end-to-end retail sales data warehouse built using
