@@ -1,358 +1,518 @@
 # Retail Sales Analytics Platform
-(SQL Server + IICS + Power BI)
 
-## 📌 Project Overview
-This project demonstrates an end-to-end retail sales data warehouse built using
-Informatica Intelligent Cloud Services (IICS) and SQL Server.
+### End-to-End Data Warehouse & Business Intelligence Solution
 
-The goal is to design and implement a scalable dimensional model,
-handle incremental loads, and ensure data quality through validations.
+**SQL Server + Informatica IICS + Power BI**
 
 ---
 
-## 🏗️ Architecture
-- Source: CSV files
-- Staging Layer: stg schema
-- Data Warehouse: dw schema
-- Facts: fact schema
-- ETL Tool: Informatica IICS
-- Database: SQL Server
+# 📌 Project Overview
+
+This project demonstrates the design and implementation of an end-to-end Retail Sales Analytics Platform built using:
+
+* SQL Server
+* Informatica Intelligent Cloud Services (IICS)
+* Power BI
+
+The solution follows a modern dimensional modeling approach and simulates a production-grade data warehouse environment.
+
+The platform ingests raw retail sales data from CSV files, processes and validates data through Informatica IICS, loads dimensional and fact tables into SQL Server, and delivers interactive business insights through Power BI dashboards.
 
 ---
 
-## 📊 Data Model
+# 🎯 Business Objectives
+
+The solution helps business users answer questions such as:
+
+* How much revenue is generated?
+* Which products perform best?
+* Which stores generate the highest sales?
+* Which customers contribute most revenue?
+* What are the sales trends over time?
+* Which categories drive business growth?
+
+---
+
+# 🏗️ Solution Architecture
+
+Retail Source Files (CSV)
+
+⬇
+
+Informatica Intelligent Cloud Services (IICS)
+
+⬇
+
+SQL Server Data Warehouse
+
+⬇
+
+Power BI Analytics Dashboards
+
+---
+
+# 📊 Architecture Components
+
+## Source Layer
+
+Retail CSV Files:
+
+* customers.csv
+* products.csv
+* stores.csv
+* orders.csv
+* order_items.csv
+
+---
+
+## Staging Layer (stg)
+
+Purpose:
+
+* Raw data ingestion
+* Data standardization
+* Initial validations
+* Audit tracking
+
+Tables:
+
+* stg_customers
+* stg_products
+* stg_stores
+* stg_orders
+* stg_order_items
+
+---
+
+## Data Warehouse Layer (dw)
+
+Dimensional model built using Star Schema principles.
+
 ### Dimensions
-- dim_date
-- dim_customer (SCD Type 2)
-- dim_product (SCD Type 1)
-- dim_store (SCD Type 1)
+
+* dim_date
+* dim_customer (SCD Type 2)
+* dim_product (SCD Type 1)
+* dim_store (SCD Type 1)
 
 ### Facts
-- fact_orders (Order-level grain)
-- fact_order_items (Product-level grain)
+
+* fact_orders
+* fact_order_items
 
 ---
 
-## 🧱 Fact Grain & Modeling Decisions
+## Reporting Layer
 
-### fact_orders
-- Grain: **One row per order**
-- Each record represents a completed customer order
-- Measures:
-  - total_amount
-- Dimensions linked:
-  - dim_date
-  - dim_customer
-  - dim_store
+Power BI semantic model built on top of SQL Server Data Warehouse.
 
-### fact_order_items
-- Grain: **One row per product per order**
-- An order with multiple products generates multiple rows
-- Measures:
-  - quantity
-  - unit_price
-  - line_total
-- Dimensions linked:
-  - dim_date
-  - dim_customer
-  - dim_product
-  - dim_store
+Provides:
 
-### Why two fact tables?
-Separating order-level and item-level data avoids:
-- Data duplication
-- Incorrect aggregations
-- Performance issues
-
-This design supports both:
-- High-level sales analysis (fact_orders)
-- Detailed product analysis (fact_order_items)
-
+* Executive Reporting
+* Product Analytics
+* Customer Analytics
+* Store Analytics
+* Sales Trend Analysis
 
 ---
 
-## 🔄 ETL Design
-- Separate staging, dimension, and fact loads
-- Surrogate keys for all dimensions
-- Business keys used for lookups
-- Null-safe change detection logic
-- Insert and update paths clearly separated
+# 📊 Dimensional Model
 
+## Dimension Tables
 
-## 🔁 Taskflow Orchestration & Load Order
+### dim_date
 
-This project follows a **controlled, dependency-driven taskflow design**
-to ensure data consistency and referential integrity.
+Static date dimension used for all time-based analysis.
 
-### 🥉 Stage Layer Load (Parallel)
-All staging tables are loaded in parallel since they are independent.
+### dim_customer
 
-- stg.stg_customers
-- stg.stg_products
-- stg.stg_stores
-- stg.stg_orders
-- stg.stg_order_items
+Slowly Changing Dimension Type 2.
 
-✔ Purpose:
-- Raw data ingestion
-- No dependencies
-- Fast and scalable
+Tracks historical customer changes.
 
----
+Examples:
 
-### 🥈 Dimension Layer Load (Sequential)
-Dimension tables are loaded **after staging** and follow dependency order.
+* Email changes
+* Phone changes
+* Address changes
 
-1. **dim_date**
-   - Loaded first (static dimension)
+Maintains:
 
-2. **dim_customer**
-   - SCD Type 2 logic
-   - Depends on `stg_customers`
-
-3. **dim_product**
-   - SCD Type 1 logic
-   - Depends on `stg_products`
-
-4. **dim_store**
-   - SCD Type 1 logic
-   - Depends on `stg_stores`
-
-✔ Purpose:
-- Generate surrogate keys
-- Handle slowly changing dimensions
-- Prepare lookup-ready dimensions
+* start_dt
+* end_dt
+* current_flag
 
 ---
 
-### 🥇 Fact Layer Load (Sequential)
-Fact tables are loaded **only after all dimensions are successfully loaded**.
+### dim_product
 
-1. **fact_orders**
-   - Grain: One row per order
-   - Depends on:
-     - dim_date
-     - dim_customer
-     - dim_store
+Slowly Changing Dimension Type 1.
 
-2. **fact_order_items**
-   - Grain: One row per product per order
-   - Depends on:
-     - dim_date
-     - dim_customer
-     - dim_product
-     - dim_store
+Updates overwrite existing values.
 
-✔ Purpose:
-- Maintain referential integrity
-- Prevent orphan foreign keys
-- Ensure accurate aggregations
+Examples:
+
+* Product description correction
+* Category updates
+* Brand updates
 
 ---
 
-## 🚦 Error Handling & Restartability
+### dim_store
 
-- Each layer runs in its own taskflow
-- Failure in one layer prevents downstream execution
-- Taskflows can be restarted from the failed step
-- Ensures production-grade reliability
+Slowly Changing Dimension Type 1.
 
----
-
-## ✅ Why This Orchestration Strategy?
-
-- Prevents partial data loads
-- Guarantees dimension availability before facts
-- Supports incremental and full loads
-- Aligns with enterprise ETL best practices
-
-
-
-## 🔄 Slowly Changing Dimension (SCD) Strategy
-
-This project implements different Slowly Changing Dimension (SCD) strategies
-based on business requirements and data volatility.
-
-### 🧍 dim_customer — SCD Type 2 (History Preserved)
-Customer attributes can change over time (address, phone, email).
-To preserve historical accuracy:
-
-- A new row is inserted when a change is detected
-- Previous record is expired using `end_dt`
-- `is_current` flag identifies the active record
-- Surrogate key changes for each version
-
-**Change Detection Logic**
-- Null-safe comparison using default placeholders
-- Only non-key attributes are compared
-- Business key (`customer_id`) is never updated
-
-**Why SCD Type 2?**
-Historical customer attributes must be retained to ensure:
-- Correct past sales reporting
-- Accurate customer behavior analysis
+Stores latest store information.
 
 ---
 
-### 📦 dim_product — SCD Type 1 (Overwrite Changes)
-Product attributes are corrected or updated without historical tracking.
+# 🧱 Fact Tables
 
-- Existing records are updated in place
-- Surrogate key remains unchanged
-- No history maintained
+## fact_orders
 
-**Change Detection Logic**
-- Null-safe comparison for all descriptive attributes
-- `product_id` is treated as immutable business key
-- Surrogate key is never updated
+### Grain
 
-**Why SCD Type 1?**
-Product changes do not require historical tracking
-and correcting data is preferred over retaining old values.
+One row per order.
 
----
+### Measures
 
-### 🏬 dim_store — SCD Type 1 (Overwrite Changes)
-Store location details may change due to data corrections.
+* total_amount
 
-- Updates overwrite existing values
-- No historical versions created
-- Surrogate key remains constant
+### Linked Dimensions
+
+* dim_date
+* dim_customer
+* dim_store
 
 ---
 
-### 📅 dim_date — Static Dimension
-The date dimension is pre-generated and does not change.
+## fact_order_items
 
-- Loaded once
-- No updates required
-- Used for all time-based analysis
+### Grain
 
----
+One row per product per order.
 
-## 🔐 Surrogate Key Handling Rules
+### Measures
 
-- Surrogate keys are system-generated
-- Never updated once assigned
-- Used only for fact table relationships
-- Business keys are used for lookups only
+* quantity
+* unit_price
+* line_total
 
----
+### Linked Dimensions
 
-## 🧠 Design Principles Applied
-
-- Business keys identify records
-- Surrogate keys join facts to dimensions
-- Change detection excludes business keys
-- Audit columns managed at target level
-- Insert and update logic clearly separated
-
-
-## ♻️ Incremental Load Strategy & Audit Columns
-
-This project implements a **batch-based incremental loading strategy**
-to efficiently process only new and changed records.
+* dim_date
+* dim_customer
+* dim_product
+* dim_store
 
 ---
 
-### 🧾 Batch Control
+# ❓ Why Two Fact Tables?
 
-- Each load is driven by a `batch_id`
-- Batch ID format: `YYYYMMDD_HHMMSS`
-- Used across:
-  - Staging
-  - Dimensions
-  - Facts
+Separating order-level and product-level facts provides:
 
-✔ Enables traceability and reprocessing
+* Better performance
+* Flexible reporting
+* Reduced duplication
+* Accurate aggregations
 
----
+Supports:
 
-### 🕒 Audit Columns Used
-
-All tables include standard audit columns:
-
-- `insert_dt` — record creation timestamp
-- `update_dt` — last update timestamp
-- `load_user` — ETL execution user
-- `batch_id` — identifies the load batch
-- `file_name` — source file name
-- `file_row_number` — row position in source file
+* Sales analysis
+* Product analysis
+* Customer analysis
+* Store performance analysis
 
 ---
 
-### 🔄 Staging Layer Incremental Logic
+# 🔄 ETL Design Using Informatica IICS
 
-- Data loaded per file per batch
-- Duplicate file detection prevents accidental reprocessing of the same file.
-- File-level validation before processing
+The ETL solution is organized into three layers:
 
-✔ Ensures raw data consistency
+## 1. Staging Layer
 
----
+Loads raw CSV files.
 
-### 🧱 Dimension Incremental Logic
+Features:
 
-- Business keys used for lookups
-- New records → **INSERT**
-- Changed records → **UPDATE (SCD logic)**
-- Unchanged records → **IGNORED**
-
-✔ Prevents unnecessary updates
+* File validation
+* Data type standardization
+* Audit tracking
+* Error handling
 
 ---
 
-### 📊 Fact Incremental Logic
+## 2. Dimension Layer
 
-- Facts loaded only for current batch
-- Foreign keys resolved via dimension lookups
-- Records are rejected or logged if corresponding dimension keys are missing.
+Loads dimensional tables.
 
-✔ Guarantees referential integrity
+Features:
 
----
-
-## 🎯 Benefits of This Strategy
-
-- Scalable for large data volumes
-- Easy restart and rollback
-- Clear data lineage
-- Production-ready design
-
+* Surrogate key generation
+* SCD Type 1 processing
+* SCD Type 2 processing
+* Change detection logic
 
 ---
 
-## ✅ Data Validation
-- Row count reconciliation
-- Null checks
-- Duplicate checks
-- Surrogate key validation
-- Fact-to-dimension integrity checks
+## 3. Fact Layer
+
+Loads fact tables.
+
+Features:
+
+* Dimension lookups
+* Surrogate key resolution
+* Referential integrity validation
+* Measure calculations
 
 ---
 
-## 🚀 Skills Demonstrated
-- Dimensional Modeling
-- SCD Type 1 & Type 2
-- Fact grain design
-- IICS mappings & taskflows
-- SQL validations
-- Production-ready ETL design
+# 🔁 Taskflow Orchestration
+
+The project uses dependency-driven taskflows.
+
+## Stage Layer
+
+Parallel execution:
+
+* stg_customers
+* stg_products
+* stg_stores
+* stg_orders
+* stg_order_items
 
 ---
 
+## Dimension Layer
 
-## 📈 How This Project Is Used
-This data warehouse enables business users and analysts to:
-- Track daily and monthly sales trends
-- Identify top-performing products and stores
-- Analyze customer lifetime value and repeat purchases
-- Ensure accurate reporting using validated, audit-ready data
+Sequential execution:
 
-All analytical queries are built on well-defined fact and dimension tables,
-following industry-standard dimensional modeling practices.
+1. dim_date
+2. dim_customer
+3. dim_product
+4. dim_store
 
 ---
 
-## 👤 Author
-Built and documented by Raghukumar Kasthuri
+## Fact Layer
+
+Sequential execution:
+
+1. fact_orders
+2. fact_order_items
+
+---
+
+# ♻️ Incremental Load Strategy
+
+Features:
+
+* Batch-based processing
+* Restartability
+* Data lineage tracking
+* Auditability
+
+Batch ID format:
+
+YYYYMMDD_HHMMSS
+
+---
+
+# 🕒 Audit Columns
+
+Implemented across staging, dimensions, and facts.
+
+* batch_id
+* insert_dt
+* update_dt
+* load_user
+* file_name
+* file_row_number
+
+---
+
+# 🚦 Error Handling
+
+The solution includes:
+
+* Mandatory field validation
+* Duplicate detection
+* Reject handling
+* Missing key validation
+* Taskflow restart capability
+
+---
+
+# ✅ Data Validation Checks
+
+Implemented validations:
+
+* Row count reconciliation
+* Null checks
+* Duplicate checks
+* Surrogate key validation
+* Fact-to-dimension integrity checks
+
+---
+
+# 📈 Power BI Dashboards
+
+The reporting layer contains multiple interactive dashboards.
+
+## 1. Executive Overview Dashboard
+
+KPIs:
+
+* Total Revenue
+* Total Orders
+* Total Customers
+* Average Order Value
+* Total Quantity Sold
+
+Visuals:
+
+* Monthly Revenue Trend
+* Revenue by Category
+* Revenue by Store
+* Payment Method Analysis
+* Top Products
+
+---
+
+## 2. Customer Analysis Dashboard
+
+KPIs:
+
+* Total Customers
+* Revenue Per Customer
+* Average Orders Per Customer
+* Highest Customer Revenue
+
+Visuals:
+
+* Top Customers
+* Revenue by State
+* Revenue by City
+* Customer Distribution
+
+---
+
+## 3. Product Performance Dashboard
+
+KPIs:
+
+* Total Products
+* Top Product Revenue
+* Revenue Per Product
+* Total Quantity Sold
+
+Visuals:
+
+* Revenue by Category
+* Top Products by Revenue
+* Top Products by Quantity
+* Product Performance Table
+
+---
+
+## 4. Store Performance Dashboard
+
+KPIs:
+
+* Total Stores
+* Top Store Revenue
+* Revenue Per Store
+* Total Quantity Sold
+
+Visuals:
+
+* Top Stores
+* Revenue by State
+* Revenue by City
+* Store Performance Table
+
+---
+
+## 5. Navigation, Tooltips & Drillthrough
+
+Implemented:
+
+* Dashboard navigation buttons
+* Home page navigation
+* Product tooltips
+* Store tooltips
+* Product drillthrough pages
+* Store drillthrough pages
+
+---
+
+# 📊 Sample Business KPIs
+
+Implemented DAX measures include:
+
+* Total Revenue
+* Total Orders
+* Total Customers
+* Total Quantity Sold
+* Average Order Value
+* Revenue Per Customer
+* Revenue Per Product
+* Revenue Per Store
+
+---
+
+# 🚀 Skills Demonstrated
+
+### Data Warehousing
+
+* Star Schema Design
+* Fact & Dimension Modeling
+* Surrogate Keys
+* Fact Grain Design
+
+### ETL Development
+
+* Informatica IICS
+* Mapping Design
+* Taskflows
+* Incremental Loading
+* Error Handling
+
+### SQL Development
+
+* Analytical Queries
+* Data Validation
+* Data Quality Checks
+* Performance-Oriented Design
+
+### Business Intelligence
+
+* Power BI
+* DAX Measures
+* Drillthrough Reports
+* Tooltips
+* Interactive Dashboards
+
+---
+
+# 📈 Business Value
+
+This platform enables business users to:
+
+* Monitor revenue performance
+* Analyze customer behavior
+* Identify top-performing products
+* Evaluate store performance
+* Track operational KPIs
+* Support data-driven decision making
+
+---
+
+# 👤 Author
+
+**Raghukumar Kasthuri**
+
+Data Engineer | ETL Developer | Power BI Developer
+
+End-to-End Retail Analytics Platform using SQL Server, Informatica IICS, and Power BI.
