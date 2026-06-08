@@ -2,4 +2,4 @@
 
 The Power BI semantic model is built using a star schema approach with two fact tables and four dimension tables.
 
-![Data Model](screenshots/model_view.png)
+https://github.com/Raghukumar-Kasthuri/retail-sales-analytics-platform/blob/main/Data%20Model/Data%20Model.png
