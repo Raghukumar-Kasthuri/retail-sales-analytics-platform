@@ -31,6 +31,26 @@ The solution helps business users answer questions such as:
 * What are the sales trends over time?
 * Which categories drive business growth?
 
+
+## 🛠️ Technology Stack
+
+| Layer                     | Technology Used                               |
+| ------------------------- | --------------------------------------------- |
+| Source System             | CSV Files                                     |
+| ETL Tool                  | Informatica Intelligent Cloud Services (IICS) |
+| Staging Layer             | SQL Server (stg schema)                       |
+| Data Warehouse            | SQL Server (dw schema)                        |
+| Fact Layer                | SQL Server (fact schema)                      |
+| Data Modeling             | Star Schema                                   |
+| Dimensions                | SCD Type 1 & SCD Type 2                       |
+| Database Objects          | Tables, Views, Keys, Constraints              |
+| Orchestration             | IICS Taskflows                                |
+| Data Quality              | Validation Rules & Reconciliation Checks      |
+| Reporting & Visualization | Power BI Desktop                              |
+| Analytics                 | DAX Measures                                  |
+| Version Control           | GitHub                                        |
+
+
 ---
 
 # 🏗️ Solution Architecture
