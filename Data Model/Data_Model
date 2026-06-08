@@ -1,0 +1,5 @@
+## ⭐ Power BI Data Model
+
+The Power BI semantic model is built using a star schema approach with two fact tables and four dimension tables.
+
+![Data Model](screenshots/model_view.png)
